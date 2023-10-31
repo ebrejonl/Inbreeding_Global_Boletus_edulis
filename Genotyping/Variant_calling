@@ -44,6 +44,8 @@ done
 #############################################################################################
 
 # 2) The second step is called DB import, and is done with the following script: (one per lineage, here I present the one for AK)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
 #!/bin/bash
 #$ -P fair_share
 #$ -cwd
@@ -91,9 +93,27 @@ done
 
 #############################################################################################################
 
+# 3) the last step is the GenotypeGVCF, here is the script for the AK lineage
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=5G
+#$ -V
+#$ -e GVCF.err
+#$ -o GVCF.out
+
+ 
+ 
+/vol/biotools/bin/gatk --java-options "-Xmx4g" GenotypeGVCFs \
+   -R /prj/porcini/ROH_world/RAW_DATA/Boletus_edulis_reference_genomes_23march23/YSU-09856/YSU-09856.scaffolds.fa \
+   -V gendb:///prj/porcini/ROH_world/Variant_Calling/AK/DB \
+   -O AK_all_site.vcf.gz \
+   --include-non-variant-sites true ### Using all site vcf here, for more acurate FROh calling. Maybe not necessary, but better for the most concervative approach possible
 
 
-
+##############################################################################################################
 
 
 

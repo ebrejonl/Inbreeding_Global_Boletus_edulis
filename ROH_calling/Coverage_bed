@@ -1,0 +1,36 @@
+# Genome coverage mask for conservative roh calling (and FROH estimates) #
+# The created bed files are the ones used in the ROH standardisation script
+# This also creates a lot of scripts
+
+population="AK BC EC CO WC GU EU"
+#population="WC"
+for pop in $population 
+do 
+mkdir /prj/porcini/ROH_world/Variant_Calling/${pop}/COVERAGE_DATA/
+cd /prj/porcini/ROH_world/Variant_Calling/${pop}/COVERAGE_DATA/
+
+Basename_samples=$(cat /prj/porcini/ROH_world/MAPPING/${pop}/Indiv_list.txt)
+
+for name in $Basename_samples
+	do	
+    mkdir /prj/porcini/ROH_world/Variant_Calling/${pop}/COVERAGE_DATA/${name}_coverage
+    cd /prj/porcini/ROH_world/Variant_Calling/${pop}/COVERAGE_DATA/${name}_coverage
+    cat > Coverage_${name}.sh << EOF
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=2G
+#$ -V
+#$ -e ${name}_coverage.err
+#$ -o ${name}_coverage.out
+
+ /usr/bin/bedtools genomecov \
+ -ibam /prj/porcini/ROH_world/MAPPING/${pop}/${name}_mapping/${name}.sorted.duplicates.bam.gz \
+ -bg > Coverage_${name}.bed
+EOF
+    qsub Coverage_${name}.sh
+    cd /prj/porcini/ROH_world/Variant_Calling/${pop}/COVERAGE_DATA/
+done
+
+done

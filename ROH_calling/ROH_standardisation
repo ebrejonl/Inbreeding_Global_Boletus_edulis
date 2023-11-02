@@ -2,7 +2,7 @@
 # Basically, the end goal is to obtain an FROH value for each individual:
 # That is the proportion of the mappable reference genome that is within Runs of homozygosity larger than 999bp
 # We use a coverage bed for each bam file to calculate the mappable reference genome length
-
+# This creates a ton of scripts, so requires some cleaning of the working environment afterwards
 
 population="AK BC EC EU CO WC"
 #population="GU"

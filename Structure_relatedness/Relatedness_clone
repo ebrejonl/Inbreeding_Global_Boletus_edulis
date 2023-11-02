@@ -1,4 +1,4 @@
-## On the vcf with all lineage genotyped on the common best reference (but seperated into different vcf), we compute the pairwise relatedness
+## On the vcf with all lineage genotyped on the common best reference (but filtered seperated into different vcf), we compute the pairwise relatedness
 # This measure of the relatedness is based on the KING algorythm
 # We then use this measure to identify the clones, or the pairs with relatedness equals or greater than 0.354
 # this threshold value is defined and explained in the method's paper (Manichaikul et al, 2010)

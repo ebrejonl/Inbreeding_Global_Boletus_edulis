@@ -1,0 +1,97 @@
+### I used the files saved in saveRDS to make/adapt the final figures
+
+library(vcfR)
+library(ape)
+library(stringr)
+library(ggplot2)
+library(ggrepel)
+library(gridExtra)
+gc()
+# Read vcf file to get the name of the individuals
+
+pca_vcf <- read.vcfR("vcf_filtered21_07_vcf.gz")
+
+print("VCF loaded")
+
+for_pop <- read.csv2("../indiv_pop_no_clone.csv")
+
+vecteur_noms<-c(names(pca_vcf@gt[1,]))
+
+vecteur_noms<-vecteur_noms[-1] # remove "format"
+
+# names loaded
+
+### Stats 
+sessionInfo()
+
+
+
+#create pcadapt object and add ID from VCF -> with pcadapt
+# needs the type bed format because the vcf file is too big
+library(pcadapt)
+
+respca_10_maf = pcadapt(input = read.pcadapt("21_07.bed", type = "bed") ,K = 10)
+
+scores = data.frame(respca_10_maf$scores)
+# order them correctly
+rownames(scores)= vecteur_noms
+scores$pop <- for_pop$lineage
+print("pca object created, and vcf indiv names added")
+#### Compute proportion of explained variance
+PEV = paste(round((respca_10_maf$singular.values^2)*100,digits=1),"%",sep="")
+#saveRDS(PEV, "PEV.rds")
+print("about to plot")
+#pdf("Ellipse_ROH_PCA.pdf")
+plot(respca_10_maf, option = "screeplot")
+my_scree_plot <- recordPlot()        # Save plot in data object
+saveRDS(my_scree_plot, "Scree_plot.rds")
+str(scores)
+write.csv2(scores, "PCA_data_filtered.csv")
+
+for (i in 1:9) {
+  plot(ggplot(data = scores, aes(x=scores[,i],y=scores[,i+1], color=scores$pop)) + theme_classic() +
+  #ggtitle(i:i+1) +
+   geom_jitter()+
+  stat_ellipse(type="norm")+
+  scale_color_brewer(palette = "Dark2")+
+  #geom_jitter(fill=scores$pop,size=0.4) +
+  xlab(paste("PC ",i ,"(",PEV[i],")",sep="")) +
+  ylab(paste("PC ",i+1,"(",PEV[i+1],")",sep="")) +
+    labs(color="Lineages")+
+  theme(legend.position="right") + geom_vline(xintercept = 0, lty = 3 , alpha=0.6) +
+  geom_hline(yintercept = 0,lty = 3,alpha=0.6 ))
+
+}
+
+dev.off()
+
+# for aesthetics tries
+p1 <-ggplot(data = scores, aes(x=scores[,1],y=scores[,2], color=scores$pop)) + theme_classic() +
+  #ggtitle(i:i+1) +
+  geom_jitter()+
+  stat_ellipse(type="norm")+
+  scale_color_brewer(palette = "Dark2")+
+  #geom_jitter(fill=scores$pop,size=0.4) +
+  xlab(paste("PC ","1" ,"(",PEV[1],")",sep="")) +
+  ylab(paste("PC ","2","(",PEV[2],")",sep="")) +
+  #labs(color="Lineages")+
+  theme(legend.position="none") + geom_vline(xintercept = 0, lty = 3 , alpha=0.6) +
+  geom_hline(yintercept = 0,lty = 3,alpha=0.6 )
+
+p2 <-ggplot(data = scores, aes(x=scores[,2],y=scores[,3], color=scores$pop)) + theme_classic() +
+  #ggtitle(i:i+1) +
+  geom_jitter()+
+  stat_ellipse(type="norm")+
+  scale_color_brewer(palette = "Dark2")+
+  #geom_jitter(fill=scores$pop,size=0.4) +
+  xlab(paste("PC ","2" ,"(",PEV[2],")",sep="")) +
+  ylab(paste("PC ","3","(",PEV[3],")",sep="")) +
+  labs(color="Lineages")+
+  theme(legend.position="right") + geom_vline(xintercept = 0, lty = 3 , alpha=0.6) +
+  geom_hline(yintercept = 0,lty = 3,alpha=0.6 )
+
+library(cowplot)
+pdf("combined_ellipse.pdf", width = 13, height = 7)
+plot_grid(p1, p2, align = "h")
+dev.off()
+##################~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~##########

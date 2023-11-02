@@ -1,0 +1,82 @@
+## For each lineage, filter the ROHs of each individuals according to its coverage bed file ##
+# Basically, the end goal is to obtain an FROH value for each individual:
+# That is the proportion of the mappable reference genome that is within Runs of homozygosity larger than 999bp
+# We use a coverage bed for each bam file to calculate the mappable reference genome length
+
+
+population="AK BC EC EU CO WC"
+#population="GU"
+for pop in $population
+do
+cd /prj/porcini/ROH_world/Variant_Calling/ALL_SITES_FILTERED/ROH_CALLING/${pop}/
+mkdir ROH_filtered_by_coverage/
+cd ROH_filtered_by_coverage/
+Basename_samples=$(cat /prj/porcini/ROH_world/MAPPING/${pop}/Indiv_list.txt)
+for name in $Basename_samples
+	do	
+ cat > Coverage_filter${name}.R << EOF
+library(data.table)
+library(tidyverse)
+library(plyranges)
+gc()
+#~~~~~~~~~~~~~~~~~~~~~~~ read raw ROH data  ~~~~~~~~~~~~~~~~~~~~~~~~~#
+mydata_raw <- fread("../${pop}_Results.csv")
+colnames(mydata_raw)<- c("RG", "ID", "Scaffold", "Startpos", "Endpos", "Length", "NB", "Quality")
+mydata_raw <- mydata_raw %>%
+filter(ID=="${name}") %>%
+  filter(Length>999)
+#~~~~~~~~~~~~~~~~~~~~~~~ Convert raw ROH data to Grange object  ~~~~~~~~~~~~~~~~~~~~~~~~~#
+myroh_grange <- data.frame(seqnames = mydata_raw$'Scaffold',
+                           start = mydata_raw$'Startpos',
+                           end = mydata_raw$'Endpos') %>% as_granges()
+print("conversion 1 ok")
+#~~~~~~~~~~~~~~~~~~~~~~~  read and filter bed ~~~~~~~~~~~~~~~~~~~~~~~~~#
+bed <- fread("../../../../${pop}/COVERAGE_DATA/${name}_coverage/Coverage_${name}.bed", header = F)
+colnames(bed) <- c("Scaffold", "startpos", "endpos", "coverage") 
+#~~~~~~~~~~~~~~~~~~~~~~~ Filter coverage >2 ~~~~~~~~~~~~~~~~~~~~~~~~~#
+bed_filtered <- bed %>%
+  as.data.frame %>%
+  filter(coverage >= 2)
+#~~~~~~~~~~~~~~~~~~~~~~~ for FRoh (mappable genome length) ~~~~~~~~~~~~~~~~~~~~~~~~~#
+Mappable_length <- bed_filtered %>%
+  mutate(length=endpos-startpos) %>%
+  select(length) %>%
+  sum()
+#~~~~~~~~~~~~~~~~~~~~~~~ convert bed into Grange (plyranges) ~~~~~~~~~~~~~~~~~~~~~~~~~#
+mygrange <- data.frame(seqnames = bed_filtered$'Scaffold',
+           start = bed_filtered$'startpos',
+           end = bed_filtered$'endpos') %>% as_granges()
+my_grange_reduced <- reduce_ranges(mygrange) # make better larger intervals
+print("conversion 2 ok")
+#~~~~~~~~~~~~~~~~~~~~~~~ # Take intersect between the two ~~~~~~~~~~~~~~~~~~~~~~~~~#
+intersect_rng <- join_overlap_intersect(my_grange_reduced , myroh_grange)
+sum_Length <- intersect_rng %>% as.data.frame() %>% 
+  filter(width>999) %>% 
+  select(width) %>%
+  sum()
+  print("intersept ok")
+#~~~~~~~~~~~~~~~~~~~~~~~ compute FROH ~~~~~~~~~~~~~~~~~~~~~~~~~#
+FRoh <- sum_Length/Mappable_length
+# done
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+FROH <- as.data.frame(cbind("ID"=c(unique(mydata_raw$'ID')), "FRoh"=c(FRoh)))
+write.csv2(FROH, "Froh_data_${name}_coverage_standardized.csv")
+## DONE 
+EOF
+
+ cat > Launcher_${name}.sh << EOF
+ #!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=1G
+#$ -V
+#$ -e L${name}_filter.err
+#$ -o L${name}_filter.out
+
+/usr/bin/Rscript Coverage_filter${name}.R 
+EOF
+    qsub Launcher_${name}.sh
+ done
+ cd /prj/porcini/ROH_world/Variant_Calling/ALL_SITES_FILTERED/ROH_CALLING/
+ done 

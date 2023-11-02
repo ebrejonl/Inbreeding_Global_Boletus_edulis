@@ -1,0 +1,101 @@
+## Here is the script used for statistical modelling using beta regression ##
+# Two methods used as a double check with slightly different maths, but results always convergent, which adds confidence to them
+# two methods are betareg() and glmmTMB(family=beta_family)
+
+library(betareg)
+library(glmmTMB)
+library(sjPlot)
+library(car)
+library(effects)
+library(data.table)
+library(tidyverse)
+library(jtools)
+library(lme4)
+
+
+gc()
+
+metadata <- fread("Data/metadata_elevation.csv")
+colnames(metadata) <- c("v", "ID", "lineage", "lat", "lon", "elevation")
+mydata_habitat <- read.csv2("Data/mydata_habitat.csv" )
+
+mydataROH <- fread("Data/Full_results_02_August.csv")
+colnames(mydataROH) <- c("NA", "ID", "FRoh")
+glmmTMB"FRoh" ,"lineage" ,"lat", "lon" ,"elevation")) ## Add metadata 
+
+###### Post-hoc lineage specific analysis ######
+pop <- c( "AK" ,"WC" ,"EU" ,"EC" ,"CO", "BC", "GU" )
+for (i in pop){
+  print(i)
+  print(mydata %>%
+    filter(lineage==i) %>%
+    betareg(FRoh ~ lat, data=.) %>% summary(type = "deviance"))
+}
+
+for (i in pop){
+  print(i)
+  print(mydata %>%
+          filter(lineage==i) %>%
+          betareg(FRoh ~ elevation, data=.) %>% summary(type = "deviance"))
+}
+
+
+
+
+pop <- c( "AK" ,"WC" ,"EU" ,"EC" ,"CO", "BC" )
+for (i in pop){
+  print(i)
+  print(mydata_habitat %>%
+          filter(lineage==i) %>%
+          betareg(FRoh ~ HS, data=.) %>% summary(type = "deviance"))
+}
+
+
+
+
+
+
+################# Lineage 
+betareg(FRoh ~ lineage, mydata) %>% summary()
+
+#####################################################################################################################
+                                          # model tables
+library(modelsummary)
+# Global 
+# Lineage 
+Model1 <- FROh_lineage <- betareg(FRoh ~ lineage, mydata) #%>% summary()
+modelplot(Model1)
+# Elevation
+Model2a <- betareg(FRoh ~ elevation, mydata) %>% summary()
+Model2b <- glmmTMB(FRoh ~ elevation + (1|lineage), family=beta_family(link="logit"), data=mydata)
+# Latitude
+Model3a <- betareg(FRoh ~ lat, mydata) 
+Model3b <- glmmTMB(FRoh ~ lat + (1|lineage), family=beta_family(link="logit"), data=mydata) %>% summary()
+# Habitat suitability
+#mydata_habitat <- merge(mydata, mydata_habitat, by=c("ID", "FRoh", "lineage", 'lat',"elevation", "lon"))
+Model4a <- betareg(FRoh ~ HS, mydata) 
+Model4b <- glmmTMB(FRoh ~ HS + (1|lineage), family=beta_family(link="logit"), data=mydata)
+### 
+
+
+# model tables GLMMTMB
+library(modelsummary)
+# Global 
+# Lineage 
+Model1 <- glmmTMB(FRoh ~ lineage,  family=beta_family(link="logit"), data=mydata) %>% summary()              
+modelplot(Model1)
+# Elevation
+Model2a <- glmmTMB(FRoh ~ elevation,  family=beta_family(link="logit"), data=mydata) %>% summary()            
+Model2b <- glmmTMB(FRoh ~ elevation + (1|lineage), family=beta_family(link="logit"), data=mydata) %>% summary()
+# Latitude 
+Model3a <- glmmTMB(FRoh ~ lat,  family=beta_family(link="logit"), data=mydata) %>% summary() 
+Model3b <- glmmTMB(FRoh ~ lat + (1|lineage), family=beta_family(link="logit"), data=mydata)  %>% summary() 
+# Habitat suitability 
+#mydata_habitat <- merge(mydata, mydata_habitat, by=c("ID", "FRoh", "lineage", 'lat',"elevation", "lon")) 
+Model4a <- glmmTMB(FRoh ~ HS,  family=beta_family(link="logit"), data=mydata) %>% summary() 
+Model4b <- glmmTMB(FRoh ~ HS + (1|lineage), family=beta_family(link="logit"), data=mydata)  %>% summary() 
+
+
+
+
+

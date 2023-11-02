@@ -1,0 +1,30 @@
+## On the vcf with all lineage genotyped on the common best reference (but seperated into different vcf), we compute the pairwise relatedness
+# This measure of the relatedness is based on the KING algorythm
+# We then use this measure to identify the clones, or the pairs with relatedness equals or greater than 0.354
+# this threshold value is defined and explained in the method's paper (Manichaikul et al, 2010)
+# This analysis was useful to identify the lists of genetically different individuals (genets) per lineage
+# We used these lists for the genotyping on their specific references and the ROH calling. 
+
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -V 
+#$ -l idle=1
+#$ -l vf=10G
+#$ -e minimal.err
+#$ -o minimal.out
+#$ -l si_flag=1
+
+pop=$(cat pop_names.txt)
+for i in $pop
+do
+cd ${i}/
+
+vcftools --gzvcf ${i}_filtered.vcf.gz --relatedness2 --out ${i}
+
+cd ../
+done 
+
+
+mkdir RELATEDNESS 
+mv */*.relatedness2 /RELATEDNESS

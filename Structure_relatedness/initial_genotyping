@@ -1,0 +1,325 @@
+## For the relatedness/structure analysis, the individuals were first genotyped on the common best reference BD747
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#### Mapping all individuals on BD747 #####
+
+# Get the reference path with 
+    cd /prj/porcini/ROH_world/MAPPING/All_one_ref
+    ref="/prj/porcini/ROH_world/RAW_DATA/Boletus_edulis_reference_genomes_23march23/BD747/ref_mem"
+    
+	Basename_samples=$(cat All_indiv_list.txt)
+	for name in $Basename_samples
+		do	
+    		DIR_samples="/prj/porcini/ROH_world/RAW_DATA/Bedulis_publicationQuality_fastq_23march23/"
+    		fastq_R1=${DIR_samples}${name}.1.trimmed.fastq.gz
+    		fastq_R2=${DIR_samples}${name}.2.trimmed.fastq.gz
+   			mkdir ${name}_mapping
+   			cd ${name}_mapping
+  			cat > M_${name}_mapping.sh << EOF
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=8G
+#$ -V
+#$ -e ${name}_map.err
+#$ -o ${name}_map.out
+    
+/vol/biotools/bin/bwa mem -t 10 -M -R "@RG\tID:${name}_1\tSM:${name}" ${ref} ${fastq_R1} ${fastq_R2} | samtools view -bS -1 -h > ${name}.bam.gz    
+echo "mapping done"
+
+# SORTING STEP
+samtools sort -l 6 -o ${name}.sorted.bam.gz -O bam -@ 20 ${name}.bam.gz
+echo "sorting done"
+
+# MARK DUPLICATES
+/prj/porcini/miniconda/envs/MAPPING/bin/picard MarkDuplicates \
+-I ${name}.sorted.bam.gz \
+-M metrics_duplicates.txt \
+-O ${name}.sorted.duplicates.bam.gz \
+-COMPRESSION_LEVEL 5
+echo "mark duplicates done"
+
+# index
+samtools index ${name}.sorted.duplicates.bam.gz
+echo "index done"
+EOF
+    qsub M_${name}_mapping.sh
+    echo "done for ${name}"
+    cd  /prj/porcini/ROH_world/MAPPING/All_one_ref/
+    done
+echo "done for ${name}"
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+### Variant_Calling ### (better explained in the genotyping folder)
+### Haplotype caller all individuals under same ref ### 
+
+ref="/prj/porcini/ROH_world/RAW_DATA/Boletus_edulis_reference_genomes_23march23/BD747/BD747-ragtag.scaffolds.fa"
+#index ref
+Basename_samples=$(cat /prj/porcini/ROH_world/MAPPING/All_one_ref/All_indiv_list.txt)
+for name in $Basename_samples
+	do	
+    mkdir ${name}_variantcalling
+    cd ${name}_variantcalling
+    cat > V_${name}_HaplotypeCaller.sh << EOF
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=10G
+#$ -V
+#$ -e ${name}_haplo.err
+#$ -o ${name}_haplo.out
+
+/vol/biotools/bin/gatk --java-options "-Xmx10g" HaplotypeCaller -ERC BP_RESOLUTION \
+-R ${ref} \
+-I "/prj/porcini/ROH_world/MAPPING/All_one_ref/${name}_mapping/${name}.sorted.duplicates.bam.gz" \
+-O /prj/porcini/ROH_world/Variant_Calling/All_one_ref/${name}_variantcalling/${name}_gatk.vcf.gz \
+--do-not-run-physical-phasing true
+EOF
+    qsub V_${name}_HaplotypeCaller.sh
+    cd /prj/porcini/ROH_world/Variant_Calling/All_one_ref/
+done
+
+####################################################################
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=15G
+#$ -V
+#$ -e ALL_db.err
+#$ -o ALL_db.out
+
+# ImportDB 
+
+/vol/biotools/bin/gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport \
+-V	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/15-08-09_variantcalling/15-08-09_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/15-08-10_variantcalling/15-08-10_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/15-08-12_variantcalling/15-08-12_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/20100815009_variantcalling/20100815009_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/242_variantcalling/242_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/244_variantcalling/244_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/552NVP_variantcalling/552NVP_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/554NVP_variantcalling/554NVP_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/60_variantcalling/60_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/A-11317_variantcalling/A-11317_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/A-11354_variantcalling/A-11354_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/A19a-203_variantcalling/A19a-203_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/A19a-227_variantcalling/A19a-227_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/AL16_variantcalling/AL16_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/Arora7188_variantcalling/Arora7188_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/B140_variantcalling/B140_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/B51_variantcalling/B51_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/B53_variantcalling/B53_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD195_variantcalling/BD195_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD572_variantcalling/BD572_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD591_variantcalling/BD591_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD592_variantcalling/BD592_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD593_variantcalling/BD593_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD594_variantcalling/BD594_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD595_variantcalling/BD595_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD596_variantcalling/BD596_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD598_variantcalling/BD598_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD599_variantcalling/BD599_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD942_variantcalling/BD942_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD944_variantcalling/BD944_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD945_variantcalling/BD945_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD948_variantcalling/BD948_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD949_variantcalling/BD949_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD950_variantcalling/BD950_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD953_variantcalling/BD953_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD958_variantcalling/BD958_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD962_variantcalling/BD962_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/BD963_variantcalling/BD963_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/Bi126_variantcalling/Bi126_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/Bi58_variantcalling/Bi58_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/Bi81_variantcalling/Bi81_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/C1411_variantcalling/C1411_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/CBHV16-153_variantcalling/CBHV16-153_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/CBHV17-101_variantcalling/CBHV17-101_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/CEP53_variantcalling/CEP53_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/C-F-109468_variantcalling/C-F-109468_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/C-F-118985_variantcalling/C-F-118985_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/darkcap_variantcalling/darkcap_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-1332_variantcalling/DBG-1332_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-17417_variantcalling/DBG-17417_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-17870_variantcalling/DBG-17870_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-23282_variantcalling/DBG-23282_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-24649_variantcalling/DBG-24649_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-24695_variantcalling/DBG-24695_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-25235_variantcalling/DBG-25235_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DBG-5044_variantcalling/DBG-5044_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DJM1345_variantcalling/DJM1345_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DUKE-0350792_variantcalling/DUKE-0350792_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DUKE-0351102_variantcalling/DUKE-0351102_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/DUKE-0913972_variantcalling/DUKE-0913972_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/F-75196_variantcalling/F-75196_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/F-75615_variantcalling/F-75615_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-09455_variantcalling/FA-09455_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-11071_variantcalling/FA-11071_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-13148_variantcalling/FA-13148_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-13860_variantcalling/FA-13860_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-13861_variantcalling/FA-13861_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-16929_variantcalling/FA-16929_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-18247_variantcalling/FA-18247_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/FA-18312_variantcalling/FA-18312_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/GAL3858_variantcalling/GAL3858_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/GM14-347_variantcalling/GM14-347_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/GM15-045_variantcalling/GM15-045_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/GM4-039_variantcalling/GM4-039_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/HL1_variantcalling/HL1_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/HL2_variantcalling/HL2_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/HL3_variantcalling/HL3_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/JFA-13440_variantcalling/JFA-13440_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/JFA-13455_variantcalling/JFA-13455_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/JFA-13456_variantcalling/JFA-13456_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/JFA-13485_variantcalling/JFA-13485_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/JWR839_variantcalling/JWR839_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST12_variantcalling/KST12_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST13-1_variantcalling/KST13-1_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST14_variantcalling/KST14_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST15-1_variantcalling/KST15-1_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST15-2_variantcalling/KST15-2_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST16_variantcalling/KST16_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST17_variantcalling/KST17_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST19_variantcalling/KST19_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST22_variantcalling/KST22_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST26_variantcalling/KST26_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST28_variantcalling/KST28_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST29_variantcalling/KST29_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST30_variantcalling/KST30_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST31_variantcalling/KST31_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST32_variantcalling/KST32_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST33_variantcalling/KST33_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST34_variantcalling/KST34_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST35_variantcalling/KST35_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST36_variantcalling/KST36_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST37_variantcalling/KST37_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST39_variantcalling/KST39_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KST5_variantcalling/KST5_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KZOM-213_variantcalling/KZOM-213_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/KZOM-214_variantcalling/KZOM-214_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/lightcap_variantcalling/lightcap_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-794254_variantcalling/MIN-794254_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-905161_variantcalling/MIN-905161_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-905177_variantcalling/MIN-905177_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-905185_variantcalling/MIN-905185_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-905190_variantcalling/MIN-905190_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-905362_variantcalling/MIN-905362_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-905373_variantcalling/MIN-905373_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921552_variantcalling/MIN-921552_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921562_variantcalling/MIN-921562_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921570_variantcalling/MIN-921570_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921977_variantcalling/MIN-921977_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921978_variantcalling/MIN-921978_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921981_variantcalling/MIN-921981_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921982_variantcalling/MIN-921982_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921983_variantcalling/MIN-921983_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921984_variantcalling/MIN-921984_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921988_variantcalling/MIN-921988_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-921989_variantcalling/MIN-921989_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MIN-923288_variantcalling/MIN-923288_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MS1-015_variantcalling/MS1-015_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MS4-004_variantcalling/MS4-004_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/MS9-005_variantcalling/MS9-005_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/N1_variantcalling/N1_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/N2_variantcalling/N2_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/N8_variantcalling/N8_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/N9_variantcalling/N9_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/PGA21-027_variantcalling/PGA21-027_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/R029174_variantcalling/R029174_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/RL1_variantcalling/RL1_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/RL2_variantcalling/RL2_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/RL3_variantcalling/RL3_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/RL5_variantcalling/RL5_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001361_variantcalling/SFSU-001361_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001397_variantcalling/SFSU-001397_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001437_variantcalling/SFSU-001437_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001438_variantcalling/SFSU-001438_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001464_variantcalling/SFSU-001464_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001471_variantcalling/SFSU-001471_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001474_variantcalling/SFSU-001474_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001476_variantcalling/SFSU-001476_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001481_variantcalling/SFSU-001481_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001501_variantcalling/SFSU-001501_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001504_variantcalling/SFSU-001504_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001548_variantcalling/SFSU-001548_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001554_variantcalling/SFSU-001554_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001555_variantcalling/SFSU-001555_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SFSU-001690_variantcalling/SFSU-001690_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/SV11-604_variantcalling/SV11-604_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/TAAM-132367_variantcalling/TAAM-132367_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/TAAM-132806_variantcalling/TAAM-132806_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/TAAM-132820_variantcalling/TAAM-132820_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/TAAM-175085_variantcalling/TAAM-175085_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/TAAM-185627_variantcalling/TAAM-185627_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/TR39322_variantcalling/TR39322_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-12520_variantcalling/UBC-12520_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-15479_variantcalling/UBC-15479_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-16706_variantcalling/UBC-16706_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-16737_variantcalling/UBC-16737_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-18518_variantcalling/UBC-18518_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-28267_variantcalling/UBC-28267_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-28296_variantcalling/UBC-28296_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-32159_variantcalling/UBC-32159_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UBC-33027_variantcalling/UBC-33027_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT249_variantcalling/UT249_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT250_variantcalling/UT250_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT284_variantcalling/UT284_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT285_variantcalling/UT285_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT286_variantcalling/UT286_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT354_variantcalling/UT354_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT477_variantcalling/UT477_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT489_variantcalling/UT489_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT555_variantcalling/UT555_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT557_variantcalling/UT557_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT567_variantcalling/UT567_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT598_variantcalling/UT598_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT600_variantcalling/UT600_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/UT90_variantcalling/UT90_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/VOL5_variantcalling/VOL5_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WS54517_variantcalling/WS54517_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-21375_variantcalling/WTU-21375_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-24032_variantcalling/WTU-24032_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-24390_variantcalling/WTU-24390_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-24718_variantcalling/WTU-24718_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-24735_variantcalling/WTU-24735_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-27121_variantcalling/WTU-27121_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-27134_variantcalling/WTU-27134_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-30041_variantcalling/WTU-30041_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-32261_variantcalling/WTU-32261_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-65824_variantcalling/WTU-65824_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-67988_variantcalling/WTU-67988_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-68299_variantcalling/WTU-68299_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-68809_variantcalling/WTU-68809_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/WTU-71222_variantcalling/WTU-71222_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-05349_variantcalling/YSU-05349_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-05404_variantcalling/YSU-05404_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-07119_variantcalling/YSU-07119_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-08902_variantcalling/YSU-08902_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-09148_variantcalling/YSU-09148_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-09856_variantcalling/YSU-09856_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-09901_variantcalling/YSU-09901_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-09911_variantcalling/YSU-09911_gatk.vcf.gz	\
+-V 	/prj/porcini/ROH_world/Variant_Calling/All_one_ref/YSU-09929_variantcalling/YSU-09929_gatk.vcf.gz	\
+--genomicsdb-workspace-path /prj/porcini/ROH_world/Variant_Calling/All_one_ref/DB \
+    -L /prj/porcini/ROH_world/RAW_DATA/Boletus_edulis_reference_genomes_23march23/BD747/Scaffold.list
+    --tmp-dir /prj/porcini/ROH_world/Variant_Calling/All_one_ref
+
+##########################################################################
+#!/bin/bash
+#$ -P fair_share
+#$ -cwd
+#$ -l idle=1
+#$ -l vf=5G
+#$ -V
+#$ -e GVCF.err
+#$ -o GVCF.out
+
+ 
+ 
+/vol/biotools/bin/gatk --java-options "-Xmx4g" GenotypeGVCFs \
+   -R /prj/porcini/ROH_world/RAW_DATA/Boletus_edulis_reference_genomes_23march23/BD747/BD747-ragtag.scaffolds.fa \
+   -V gendb:///prj/porcini/ROH_world/Variant_Calling/All_one_ref/DB \
+   -O All_one_ref_all_site.vcf.gz \
+   --include-non-variant-sites true 

@@ -133,68 +133,64 @@ Scree_plot
 
 
 ##################################################################################
-# 1) all lineages elevation 
-#pdf("All_lineage_elevation.pdf", width = 14, height=8)
-#ggsave("All_lineage_elevation_clean_letters.svg", plot=lin1, width = 14, height=7)
-Palette <- c("#66C2A5" ,"#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854" ,"#FFD92F" ,"#E5C494" ,"#B3B3B3")
-lettre <-c(AK="[a]", BC="[b]", CO="[c]", EC="[d]", EU="[e]", GU="[f]", WC="[g]") 
-
-lin1 <- ggplot(mydata, aes(x=elevation, y=FRoh, fill=lineage))+ 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+### New style HS
+HS <- ggplot(mydata_habitat, aes(x=HS, y=FRoh, color=lineage, fill=lineage))+ 
   geom_point(cex=4,shape = 21, colour = "black")+
-  geom_smooth(method="glm",
-      method.args = list(family =binomial(link="logit")), 
-      se = F, fullrange=TRUE, cex=1.2, color="#878787")+
-  theme_apa() +
-  theme( axis.text.y.left = element_text(size=14),  
-        axis.text.x.bottom  = element_text(size=14))+
-  facet_wrap(~lineage, ncol = 4, strip.position  = "top", scales = "free", 
-             labeller =labeller(lineage=lettre)) +
-  theme(strip.text.x.top = element_text(size=17, color="black", margin = margin(b=10, unit="pt") ),
-        axis.title.x = element_text( size=20, vjust = -1),
-        axis.title.y = element_text(size=20, vjust = +1.5),
-        legend.position = c(0.88, 0.23)) +
-  scale_x_continuous(n.breaks =4, labels = label_number(accuracy = 1))+
-  scale_y_continuous(n.breaks = 4, labels=label_number(accuracy = 0.01))+
-  scale_fill_manual(values = Palette)+
- # scale_color_brewer(aesthetics = "fill", palette="Set2" )+
-  theme(legend.box.background = element_rect(color="black", size=0.4),
-        axis.title.x.bottom = element_text(size=16, vjust = -1))+
-  guides(fill = guide_legend(override.aes = list(linetype = 0))) +
-  xlab("Elevation (m)")+
-  ylab(expression("F"[ROH])) ; lin1
-#dev.off()
-# Number of ticks not even
-############################################################################################
-# All lineages Latitude 
-# 1) all lineages latitude 
-#ggsave("All_lineage_latitude_clean_letters.svg",plot=lin,  width = 14, height=7)
-lettre <-c(AK="[a]", BC="[b]", CO="[c]", EC="[d]", EU="[e]", GU="[f]", WC="[g]") 
-lin <- ggplot(mydata, aes(x=lat, y=FRoh, fill=lineage))+ 
-  geom_point(cex=4,shape = 21, colour = "black")+
+  scale_fill_manual(values = Palette2)+
+  scale_color_manual(values=Palette2)+
+  xlab("LGM Habitat suitability")+
+  guides(color = guide_legend(override.aes = list(linetype = 0)))+
+  ylab(expression("F"[ROH]))+
   geom_smooth(method="glm",
               method.args = list(family =binomial(link="logit")), 
-              se = F, fullrange=TRUE, cex=1.2, color="#878787")+
-  theme_apa() +
-  theme(axis.text.y.left = element_text(size=14),  
-        axis.text.x.bottom  = element_text(size=14))+
-  facet_wrap(~lineage, ncol = 4, strip.position  = "top", scales = "free",
-             labeller =labeller(lineage=lettre)) +
-  scale_x_continuous(n.breaks =4, labels = label_number(accuracy = 1))+
-  scale_y_continuous(n.breaks = 4, labels=label_number(accuracy = 0.01))+
-  #scale_fill_manual(labels=c("Alaska", "British Columbia","Colorado", 
-   #                          "East Coast", "Europe", "Guatemala", "West Coast"), 
-    #                values = Palette)+
-  scale_fill_manual(values=Palette)+
-  guides(fill = guide_legend(override.aes = list(linetype = 0))) +
-  theme(legend.box.background = element_rect(color="black", size=0.4))+
-  theme(strip.text.x.top = element_text(size=17, color="black", margin = margin(b=10, unit="pt") ),
-        axis.title.x = element_text( size=20, vjust = -1),
-        axis.title.y = element_text(size=20, vjust = +1.5),
-        legend.position = c(0.88, 0.23)) +
-  xlab("Latitude")+
-  ylab(expression("F"[ROH])) ; lin
-#dev.off()
+              se = F,  cex=1.2)+
+  theme_apa()+
+  theme(axis.title.y.left = element_text(size=24),
+        axis.title.x.bottom = element_text(size=22, vjust = -1),
+        axis.text.y.left = element_text(size=18), 
+        axis.text.x.bottom = element_text(size=18, vjust = 0) ) ; HS
 
+LAT <- ggplot(mydata, aes(x=lat, y=FRoh, color=lineage, fill=lineage))+ 
+  geom_point(cex=4,shape = 21, colour = "black")+
+  scale_fill_manual(values = Palette)+
+  scale_color_manual(values=Palette)+
+  scale_color_manual(values=Palette)+
+  guides(color = guide_legend(override.aes = list(linetype = 0)))+
+  xlab("Latitude")+
+  ylab(expression("F"[ROH]))+
+  geom_smooth(method="glm",
+              method.args = list(family =binomial(link="logit")), 
+              se = F,  cex=1.2)+
+  theme_apa()+
+  theme(axis.title.y.left = element_text(size=24),
+        axis.title.x.bottom = element_text(size=22, vjust = -1),
+        axis.text.y.left = element_text(size=18), 
+        axis.text.x.bottom = element_text(size=18, vjust = 0) ) ; LAT
+
+EL <- ggplot(mydata, aes(x=elevation, y=FRoh, color=lineage, fill=lineage))+ 
+  geom_point(cex=4,shape = 21, colour = "black")+
+  scale_fill_manual(values = Palette)+
+  scale_color_manual(values=Palette)+
+  guides(color = guide_legend(override.aes = list(linetype = 0)))+
+  geom_smooth(method="glm",
+              method.args = list(family =binomial(link="logit")), 
+              se = F,  cex=1.2)+
+  xlab("Elevation (m)")+
+  ylab(expression("F"[ROH]))+
+  theme_apa() +
+  theme(axis.title.y.left = element_text(size=24),
+        axis.title.x.bottom = element_text(size=22, vjust = -1),
+        axis.text.y.left = element_text(size=18), 
+        axis.text.x.bottom = element_text(size=18, vjust = 0) ); EL
+
+
+panel3 <- EL / LAT / HS +plot_annotation(tag_levels = list(c("(a)", "(b)", "(c)"))) & theme(plot.tag = element_text(size=20))
+
+
+
+##################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure 2 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 ###############################################################
 ## Removing yellow (Guatemala which is absent of this analysis)
@@ -355,32 +351,3 @@ pq <- cor1 + cor2
 
 
 #############################################################################################
-#
-### HS
-Palette <- c("#66C2A5" ,"#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854" ,"#E5C494")
-lettre <-c(AK="[a]", BC="[b]", CO="[c]", EC="[d]", EU="[e]", GU="[f]", WC="[g]") 
-
-habitat <- ggplot(mydata_habitat, aes(x=HS, y=FRoh, fill=lineage))+ 
-  geom_point(cex=4,shape = 21, colour = "black")+
-  geom_smooth(method="glm",
-              method.args = list(family =binomial(link="logit")), 
-              se = F, fullrange=TRUE, cex=1.2, color="#878787")+
-  theme_apa() +
-  theme(axis.text.y.left = element_text(size=14),  
-         axis.text.x.bottom  = element_text(size=14))+
-  facet_wrap(~lineage, ncol = 3, strip.position  = "top", scales = "free", 
-             labeller =labeller(lineage=lettre)) +
-  theme(strip.text.x.top = element_text(size=17, color="black", face = "plain", margin = margin(b=10, unit="pt") ),
-        axis.title.x = element_text( size=20, vjust = -1),
-        axis.title.y = element_text(size=20, vjust = +1.5),
-        legend.position = c(1.5, 0.23)) +
-  #scale_x_continuous(n.breaks =4, labels = label_number(accuracy = 1))+
-  #scale_y_continuous(n.breaks = 4, labels=label_number(accuracy = 0.01))+
-  scale_fill_manual(values = Palette)+
-  # scale_color_brewer(aesthetics = "fill", palette="Set2" )+
-  theme(legend.box.background = element_rect(color="black", size=0.4),
-        axis.title.x.bottom = element_text(size=16, vjust = -1))+
-  guides(fill = guide_legend(override.aes = list(linetype = 0))) +
-  xlab("LGM Habitat suitability")+
-  ylab(expression("F"[ROH])) ; habitat
-ggsave("HS_all_lineages.svg", plot = habitat, width = 12.5, height = 8)

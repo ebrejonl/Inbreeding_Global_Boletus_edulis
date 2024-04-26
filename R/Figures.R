@@ -134,59 +134,63 @@ Scree_plot
 
 ##################################################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure 3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-### New style HS
-HS <- ggplot(mydata_habitat, aes(x=HS, y=FRoh, color=lineage, fill=lineage))+ 
+# need to add the * for significance, and put better axis
+Palette_pca <- c("#66C2A5", "#FC8D62" ,"#8DA0CB" ,"#E78AC3", "#A6D854" , "#E5C494" )
+Palette2 <- c("#66C2A5" ,"#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854" ,"#E5C494")
+
+HS <- mydata %>% filter(!lineage=="GU") %>%
+  ggplot(data=., aes(x=HS, y=FRoh, color=lineage, fill=lineage))+ 
   geom_point(cex=4,shape = 21, colour = "black")+
-  scale_fill_manual(values = Palette2)+
-  scale_color_manual(values=Palette2)+
+  scale_fill_manual(values = Palette2,labels=c("AK", "BC", "CO *", "EC", "EU",  "WC"))+
+  scale_color_manual(values=Palette2, guide=F)+
   xlab("LGM Habitat suitability")+
-  guides(color = guide_legend(override.aes = list(linetype = 0)))+
+  guides(fill = guide_legend(override.aes = list(linetype = 0)))+
+  #guides(color  = NULL)+
   ylab(expression("F"[ROH]))+
   geom_smooth(method="glm",
               method.args = list(family =binomial(link="logit")), 
               se = F,  cex=1.2)+
   theme_apa()+
-  theme(axis.title.y.left = element_text(size=24),
-        axis.title.x.bottom = element_text(size=22, vjust = -1),
-        axis.text.y.left = element_text(size=18), 
-        axis.text.x.bottom = element_text(size=18, vjust = 0) ) ; HS
+  theme(aspect.ratio = 1, axis.title.y.left = element_text(size=24),
+        axis.title.x.bottom = element_text(size=20, vjust = -2),
+        axis.text.y.left = element_text(size=15, color="black"), 
+        axis.text.x.bottom = element_text(size=15, color="black", vjust = 0) ) ; HS
 
 LAT <- ggplot(mydata, aes(x=lat, y=FRoh, color=lineage, fill=lineage))+ 
   geom_point(cex=4,shape = 21, colour = "black")+
-  scale_fill_manual(values = Palette)+
-  scale_color_manual(values=Palette)+
-  scale_color_manual(values=Palette)+
-  guides(color = guide_legend(override.aes = list(linetype = 0)))+
+  scale_fill_manual(values = Palette,labels=c("AK *", "BC", "CO", "EC", "EU", "GU *", "WC"))+
+  scale_color_manual(values=Palette, guide=F)+
+  guides(fill = guide_legend(override.aes = list(linetype = 0)))+
   xlab("Latitude")+
   ylab(expression("F"[ROH]))+
   geom_smooth(method="glm",
               method.args = list(family =binomial(link="logit")), 
               se = F,  cex=1.2)+
   theme_apa()+
-  theme(axis.title.y.left = element_text(size=24),
-        axis.title.x.bottom = element_text(size=22, vjust = -1),
-        axis.text.y.left = element_text(size=18), 
-        axis.text.x.bottom = element_text(size=18, vjust = 0) ) ; LAT
+        theme(aspect.ratio = 1, axis.title.y.left = element_text(size=24),
+              axis.title.x.bottom = element_text(size=20, vjust = -1),
+              axis.text.y.left = element_text(size=15, color="black"), 
+              axis.text.x.bottom = element_text(size=15, color="black", vjust = 0) ) ; LAT
 
 EL <- ggplot(mydata, aes(x=elevation, y=FRoh, color=lineage, fill=lineage))+ 
   geom_point(cex=4,shape = 21, colour = "black")+
-  scale_fill_manual(values = Palette)+
-  scale_color_manual(values=Palette)+
-  guides(color = guide_legend(override.aes = list(linetype = 0)))+
+  scale_fill_manual(values = Palette,labels=c("AK", "BC", "CO", "EC", "EU *", "GU *", "WC"))+
+  scale_color_manual(values=Palette, guide=F)+
+  guides(fill = guide_legend(override.aes = list(linetype = 0)))+
   geom_smooth(method="glm",
               method.args = list(family =binomial(link="logit")), 
               se = F,  cex=1.2)+
   xlab("Elevation (m)")+
   ylab(expression("F"[ROH]))+
   theme_apa() +
-  theme(axis.title.y.left = element_text(size=24),
-        axis.title.x.bottom = element_text(size=22, vjust = -1),
-        axis.text.y.left = element_text(size=18), 
-        axis.text.x.bottom = element_text(size=18, vjust = 0) ); EL
+  theme(aspect.ratio = 1, axis.title.y.left = element_text(size=24),
+        axis.title.x.bottom = element_text(size=20, vjust = -1),
+        axis.text.y.left = element_text(size=15, color="black"), 
+        axis.text.x.bottom = element_text(size=15, color="black", vjust = 0) ); EL
 
-
-panel3 <- EL / LAT / HS +plot_annotation(tag_levels = list(c("(a)", "(b)", "(c)"))) & theme(plot.tag = element_text(size=20))
-
+library(patchwork)
+panel3 <- EL / LAT / HS +plot_annotation(tag_levels = list(c("(a)",
+  "(b)", "(c)"))) & theme(plot.tag = element_text(size=20)) ;panel3
 
 
 ##################################################################################

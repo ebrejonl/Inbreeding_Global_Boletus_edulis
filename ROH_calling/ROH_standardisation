@@ -1,16 +1,15 @@
-## For each lineage, filter the ROHs of each individuals according to its coverage bed file ##
-# Basically, the end goal is to obtain an FROH value for each individual:
-# That is the proportion of the mappable reference genome in Runs of homozygosity larger than 999bp
-# We use a coverage bed for each bam file to calculate the mappable reference genome length
-# This creates a ton of scripts, so requires some cleaning of the working environment afterwards
+## For each lineage, filter the ROHs of each individuals according to its coverage bed file
+## Compute the FROHs for different roh sizes categories
+## Compute FIS per populations on 50 000 randomly selected LD pruned SNPs
 
-population="AK BC EC EU CO WC"
-#population="GU"
+population="AK BC EC EU CO WC GU"
 for pop in $population
 do
-cd /prj/porcini/ROH_world/Variant_Calling/ALL_SITES_FILTERED/ROH_CALLING/${pop}/
-mkdir ROH_filtered_by_coverage/
-cd ROH_filtered_by_coverage/
+cd /prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/April_9
+#cd /prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/ROH_calling/${pop}/
+mkdir FROH_categories/${pop}/
+mkdir VALID_ROHS/${pop}
+cd FROH_categories/${pop}/
 Basename_samples=$(cat /prj/porcini/ROH_world/MAPPING/${pop}/Indiv_list.txt)
 for name in $Basename_samples
 	do	
@@ -20,23 +19,28 @@ library(tidyverse)
 library(plyranges)
 gc()
 #~~~~~~~~~~~~~~~~~~~~~~~ read raw ROH data  ~~~~~~~~~~~~~~~~~~~~~~~~~#
-mydata_raw <- fread("../${pop}_Results.csv")
+mydata_raw <- fread("/prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/DP_change_tests/standart_filter_change_only/${pop}/${pop}_Results.csv")
 colnames(mydata_raw)<- c("RG", "ID", "Scaffold", "Startpos", "Endpos", "Length", "NB", "Quality")
 mydata_raw <- mydata_raw %>%
 filter(ID=="${name}") %>%
-  filter(Length>999)
+#### Change the minimum ROH length threshold here ####
+  filter(Length>999) # 1kb
+  #filter(Length >9999) ## 10kb minimum
 #~~~~~~~~~~~~~~~~~~~~~~~ Convert raw ROH data to Grange object  ~~~~~~~~~~~~~~~~~~~~~~~~~#
 myroh_grange <- data.frame(seqnames = mydata_raw$'Scaffold',
                            start = mydata_raw$'Startpos',
                            end = mydata_raw$'Endpos') %>% as_granges()
 print("conversion 1 ok")
 #~~~~~~~~~~~~~~~~~~~~~~~  read and filter bed ~~~~~~~~~~~~~~~~~~~~~~~~~#
-bed <- fread("../../../../${pop}/COVERAGE_DATA/${name}_coverage/Coverage_${name}.bed", header = F)
+bed <- fread("/prj/porcini/ROH_world/Variant_Calling/${pop}/COVERAGE_DATA/${name}_coverage/Coverage_${name}.bed", header = F)
 colnames(bed) <- c("Scaffold", "startpos", "endpos", "coverage") 
-#~~~~~~~~~~~~~~~~~~~~~~~ Filter coverage >2 ~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+#~~~~~~~~~~~~~~~~~~~~~~~ Filter coverage >=5 ~~~~~~~~~~~~~~~~~~~~~~~~~#
+### Choosing the original filter= >5
 bed_filtered <- bed %>%
   as.data.frame %>%
-  filter(coverage >= 2)
+  #filter(coverage >= 2) # initial
+  filter(coverage >=5)
 #~~~~~~~~~~~~~~~~~~~~~~~ for FRoh (mappable genome length) ~~~~~~~~~~~~~~~~~~~~~~~~~#
 Mappable_length <- bed_filtered %>%
   mutate(length=endpos-startpos) %>%
@@ -48,35 +52,180 @@ mygrange <- data.frame(seqnames = bed_filtered$'Scaffold',
            end = bed_filtered$'endpos') %>% as_granges()
 my_grange_reduced <- reduce_ranges(mygrange) # make better larger intervals
 print("conversion 2 ok")
-#~~~~~~~~~~~~~~~~~~~~~~~ # Take intersect between the two ~~~~~~~~~~~~~~~~~~~~~~~~~#
-intersect_rng <- join_overlap_intersect(my_grange_reduced , myroh_grange)
-sum_Length <- intersect_rng %>% as.data.frame() %>% 
-  filter(width>999) %>% 
+#~~~~~~~~~~~~~~~~~~~~~~~ # Take valid standardized ROHs ~~~~~~~~~~~~~~~~~~~~~~~~~#
+intersect_rng <- join_overlap_intersect(my_grange_reduced , myroh_grange) %>% as.data.frame() %>% filter(width>999)
+
+#~~~~~~~~~~~~~~~~~~~~~~~ Write valid rohs for the ROH length frequency supplementary figure ~~~~~~~~~~~~~~~~~~~~~~~~~#
+valid_ROHs <- intersect_rng
+write.csv2(valid_ROHs, "../../VALID_ROHS/${pop}/valid_ROHs_${name}_coverage_standardized.csv")
+
+#~~~~~~~~~~~~~~~~~~~~~~~ compute FROH per categories ~~~~~~~~~~~~~~~~~~~~~~~~~#
+# Generations to ROH length is : 1/(2g)X3400= ROH length in kb
+
+# 5 categories
+sum_Length_600_1700g <- intersect_rng %>% 
+  filter(width > 999 & width < 2501) %>% 
   select(width) %>%
-  sum()
-  print("intersept ok")
-#~~~~~~~~~~~~~~~~~~~~~~~ compute FROH ~~~~~~~~~~~~~~~~~~~~~~~~~#
-FRoh <- sum_Length/Mappable_length
-# done
+  summarise(sum = sum(width))
+sum_Length_600_300g <- intersect_rng %>% 
+  filter(width > 2500 & width < 5001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_300_100g <- intersect_rng %>% 
+  filter(width > 5000 & width < 17001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_100_20g <- intersect_rng %>% 
+  filter(width > 17000 & width < 85001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_20_9g <- intersect_rng %>% 
+  filter(width > 85000 & width < 180000) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+# Calculate FRoh values
+# 5 categories
+FRoh_600_1700g <- sum_Length_600_1700g$sum / Mappable_length
+FRoh_600_300g <- sum_Length_600_300g$sum / Mappable_length
+FRoh_300_100g <- sum_Length_300_100g$sum / Mappable_length
+FRoh_100_20g <- sum_Length_100_20g$sum / Mappable_length
+FRoh_20_9g <- sum_Length_20_9g$sum / Mappable_length
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+### 4 categories A:
+sum_Length_1700_500g <- intersect_rng %>% 
+  filter(width > 999 & width < 3401) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_500_100g <- intersect_rng %>% 
+  filter(width > 3400 & width < 17001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+# remaining 2 are the same as before (from 5 categories)
+
+### 4 categories B: # First and last are the same as 4A
+sum_Length_500_50g <- intersect_rng %>% 
+  filter(width > 3400 & width < 34001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_50_20g <- intersect_rng %>% 
+  filter(width > 34000 & width < 85001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+
+
+# Calculate FRoh values 4 categories 
+FRoh_1700_500g <- sum_Length_1700_500g$sum / Mappable_length
+FRoh_500_100g <- sum_Length_500_100g$sum / Mappable_length
+FRoh_500_50g <- sum_Length_500_50g$sum / Mappable_length
+FRoh_50_20g <- sum_Length_50_20g$sum / Mappable_length
+# already done FRoh_20_9g <- sum_Length_20_9g$sum / Mappable_length
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+### 3 categories A
+sum_Length_1700_500g <- intersect_rng %>% 
+  filter(width > 999 & width < 3401) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_500_20g <- intersect_rng %>% 
+  filter(width > 3400 & width < 85001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_20_9g <- intersect_rng %>% 
+  filter(width > 85000 & width < 189000) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+
+### 3 categories B # first is the same as 3A
+sum_Length_500_50g <- intersect_rng %>% 
+  filter(width > 3400 & width < 34001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_50_9g <- intersect_rng %>% 
+  filter(width > 85000 & width < 189000) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+
+### 3 categories C # last is the same as 3B
+sum_Length_1700_200g <- intersect_rng %>% 
+  filter(width > 999 & width < 8501) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+sum_Length_200_50g <- intersect_rng %>% 
+  filter(width > 8500 & width < 34001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+
+### 3 categories D # first is the same as 3C and last as 3A
+sum_Length_200_20g <- intersect_rng %>% 
+  filter(width > 8500 & width < 85001) %>% 
+  select(width) %>%
+  summarise(sum = sum(width))
+
+# Calculate FRoh values 3 categories 
+# already done : FRoh_1700_500g <- sum_Length_1700_500g$sum / Mappable_length
+FRoh_500_20g <- sum_Length_500_20g$sum / Mappable_length
+# already done FRoh_500_50g <- sum_Length_500_50g$sum / Mappable_length
+FRoh_50_9g <- sum_Length_50_9g$sum / Mappable_length
+FRoh_1700_200g <- sum_Length_1700_200g$sum / Mappable_length
+FRoh_200_20g <- sum_Length_200_20g$sum / Mappable_length
+FRoh_200_50g <- sum_Length_200_50g$sum / Mappable_length
+
+# already done FRoh_20_9g <- sum_Length_20_9g$sum / Mappable_length
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+# Create FROH data frame
+FROH <- data.frame(
+  ID = unique(mydata_raw$ID),
+  # 5 categories
+  FRoh_600_1700g = FRoh_600_1700g, 
+  FRoh_600_300g = FRoh_600_300g,
+  FRoh_300_100g = FRoh_300_100g,
+  FRoh_100_20g = FRoh_100_20g,
+  FRoh_20_9g = FRoh_20_9g,
+  # 4 categories 
+  FRoh_1700_500g = FRoh_1700_500g,
+  FRoh_500_100g = FRoh_500_100g,
+  FRoh_500_50g =FRoh_500_50g,
+  FRoh_50_20g =FRoh_50_20g,
+  # 3 categories
+  FRoh_500_20g= FRoh_500_20g,
+  FRoh_1700_200g = FRoh_1700_200g,
+  FRoh_200_20g = FRoh_200_20g,
+  FRoh_200_50g = FRoh_200_20g,
+  FRoh_50_9g=FRoh_50_9g,
+  pop="${pop}")
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-FROH <- as.data.frame(cbind("ID"=c(unique(mydata_raw$'ID')), "FRoh"=c(FRoh)))
 write.csv2(FROH, "Froh_data_${name}_coverage_standardized.csv")
+
 ## DONE 
 EOF
 
  cat > Launcher_${name}.sh << EOF
- #!/bin/bash
-#$ -P fair_share
-#$ -cwd
-#$ -l idle=1
-#$ -l vf=1G
-#$ -V
-#$ -e L${name}_filter.err
-#$ -o L${name}_filter.out
+#!/bin/bash
+#SBATCH --account=ebrejonl
+#SBATCH --mem=1G
+
 
 /usr/bin/Rscript Coverage_filter${name}.R 
 EOF
-    qsub Launcher_${name}.sh
+    sbatch Launcher_${name}.sh
+ done
+ #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Part II, FIS from SNPs, from pruning snps to 'Plink --het' ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+## To get the 50 000 random SNPs for Fis:
+# 1) ID the wanted positions with :
+cd /prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/April_9/FIS/
+/prj/porcini/miniconda/envs/Plink/bin/plink --vcf /prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/DP_change_tests/standart_filter_change_only/${pop}/${pop}_all_sites_filtered_vcf.gz --indep 50 5 2 --out ${pop}_pruned_SNPs_IDs --allow-extra-chr
+/prj/porcini/miniconda/envs/Plink/bin/plink --vcf /prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/DP_change_tests/standart_filter_change_only/${pop}/${pop}_all_sites_filtered_vcf.gz --out ${pop}_SNPs_plinkready --allow-extra-chr --extract ${pop}_pruned_SNPs_IDs.prune.in --make-bed 
+/prj/porcini/miniconda/envs/Plink/bin/plink --bfile ${pop}_SNPs_plinkready --het --out ${pop}.het --allow-extra-chr
+
+cd /prj/porcini/ROH_world/Bcftools/NO_CLONE/Resubmission/April_9
+  done
  done
  cd /prj/porcini/ROH_world/Variant_Calling/ALL_SITES_FILTERED/ROH_CALLING/
  done 

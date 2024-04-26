@@ -354,4 +354,53 @@ pq <- cor1 + cor2
 #ggsave("correlation_bar.svg", plot = pq, width=10, height = 6)
 
 
-#############################################################################################
+##################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure 4 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+mydata <- read.csv2(file = "FROH_per_category_10_April.csv") %>% 
+  pivot_longer(cols=c("FRoh_600_1700g", "FRoh_600_300g", "FRoh_200_50g",
+                      "FRoh_300_100g", "FRoh_100_20g",
+                      "FRoh_20_9g", "FRoh_1700_500g",
+                      "FRoh_500_100g", "FRoh_500_50g",  "FRoh_50_20g", "FRoh_500_20g",
+                      "FRoh_50_9g", "FRoh_1700_200g",
+                      "FRoh_200_20g"), 
+               names_to = "Category", values_to = "FROH") %>% as.data.frame()
+
+
+new_plot <- mydata %>%
+  filter(Category=="FRoh_1700_200g" |
+           Category=="FRoh_200_50g"|
+           Category=="FRoh_50_9g") %>%
+  mutate(prop_geno = FROH*100) %>%
+  ggplot()+
+  #geom_violin(mapping=aes(x=factor(Category,
+   #                                 levels = c("FRoh_1700_200g", "FRoh_200_50g", "FRoh_50_9g")),
+    #                       y=prop_geno, fill=pop), alpha=0.4) +
+  geom_boxplot(mapping=aes(x=factor(Category,
+                                    levels = c("FRoh_1700_200g", "FRoh_200_50g", "FRoh_50_9g")),
+                           y=prop_geno, fill=pop), outliers = FALSE) +
+  geom_point(mapping=aes(x=factor(Category,
+                                         levels = c("FRoh_1700_200g", "FRoh_200_50g", "FRoh_50_9g")),
+                                y=prop_geno, fill=pop), shape=21, alpha=0.5) +
+  facet_wrap(~pop, ncol=3, scales = "free", strip.position = "top")+
+  #  theme_simple(axis_lines = TRUE, grid_lines = FALSE, base_size = 13,
+  #              base_family = "Helvetica") +
+  ylab("% of genome IBD") +
+    scale_x_discrete(guide = guide_axis(n.dodge = 1), labels=c("[1700:200g]",                        
+                            "[200:50g]",
+                             "[50:9g]")) +
+  scale_fill_brewer(palette = "Set2") +
+  xlab("ROH length class [~ generations to common ancestor]") +
+  theme_apa() +
+  theme(legend.position = "bottom",panel.grid.minor.x = element_line(color="black", linewidth=0.4),
+        #panel.grid.major.y = element_line(color="black", linewidth=0.4),
+        #axis.line = element_line(color="black", linewidth=0.2),
+        axis.line.x.top =element_line(color="black", linewidth=0.4),
+        axis.line.y.right = element_line(color="black", linewidth=0.2),
+        axis.text.x.bottom = element_text(color="black"),
+        axis.text.y.left= element_text(color="black")); new_plot
+
+
+
+

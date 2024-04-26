@@ -404,3 +404,91 @@ new_plot <- mydata %>%
 
 
 
+##################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure S3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+df <- read_csv2("Valid_ROH_for_freq_10_April.csv") 
+
+
+hist1 <- ggplot(df ,aes(x=Length/1000,fill=pop)) +
+  geom_histogram(col="black")+
+  scale_color_brewer(aesthetics = "fill", palette="Set2")+
+  #xlab("ROH length (bp)")+
+  #facet_wrap(~ Threshold, ncol=4)+ #scales = "free", )+
+  labs(fill="Lineage", y="Count")+
+  ylab("")+
+  ggtitle("a)")+
+  facet_wrap(.~ pop ,ncol=7, scales="free_y")+ #scales = "free", )+
+  #xlim(1000,200000)+
+  theme_bw() +
+  theme(strip.text.y = element_text(),legend.position = "none", axis.title.x.bottom = element_blank()) ; hist1
+
+hist2 <- df %>% filter(Length>9999) %>% # 10kb
+  ggplot(. ,aes(x=Length/1000,fill=pop)) +
+  geom_histogram(col="black")+
+  ggtitle("b)")+
+  scale_color_brewer(aesthetics = "fill", palette="Set2")+
+  xlab("ROH length (bp)")+
+  #facet_wrap(~ Threshold, ncol=4)+ #scales = "free", )+
+  labs(fill="Lineage", y="ROH count")+
+  facet_wrap(.~ pop ,ncol=7, scales="free_y")+ #scales = "free", )+
+  #xlim(1000,200000)+
+  theme_bw() +
+  theme(strip.text.y = element_text(), axis.title.x.bottom = element_blank()) ; hist2
+
+hist3 <- df %>% filter(Length>19999) %>% # 20kb
+  ggplot(. ,aes(x=Length/1000,fill=pop)) +
+  geom_histogram(col="black")+
+  ggtitle("c)")+
+  scale_color_brewer(aesthetics = "fill", palette="Set2")+
+  xlab("ROH length (kb)")+
+  ylab("")+
+  #facet_wrap(~ Threshold, ncol=4)+ #scales = "free", )+
+  labs(fill="Lineage")+
+  facet_wrap(.~ pop ,ncol=7, scales="free_y")+ #scales = "free", )+
+  #xlim(1000,200000)+
+  theme_bw() +
+  theme(strip.text.y = element_text(), legend.position = "none",
+        axis.title.x=element_text(vjust=-1)) ; hist3
+
+library(patchwork)
+
+full <- hist1/hist2/hist3 ; full
+
+ggsave(plot = full, filename = "Histogram_panel.png", width = 16, height = 8, dpi = 300)  
+
+
+
+
+##################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure S5 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+refs <- read.csv2("all_fai.csv")
+sorted_refs <- refs %>%
+  group_by(Lineages) %>%
+  arrange(Lineages, desc(length)) %>%
+  mutate(
+    Cumulative_Sum = cumsum(length),
+    Total_length = sum(length),
+    Percent_cumu = Cumulative_Sum / Total_length * 100
+  )
+
+# Plotting this
+p <- ggplot(sorted_refs) +
+  geom_col(mapping=aes(x=reorder(name, -length, FUN = sum), y=length, fill = Lineages)) +
+  geom_line(mapping=aes(x=reorder(name, -length, FUN = sum), y =Percent_cumu*40000, group=Lineages),
+            color = "red") +
+  ylim(0, 3e+06)+
+  facet_wrap(~Lineages, scales = "free_x", ncol=1) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1/40000, 
+  breaks = c(0, 20, 40, 60, 80, 100),
+  labels = c("0", "20", "40", "60", "80", "100"), name = "Percentage of Genome"))+
+  scale_fill_brewer(palette="Set2") +
+  theme_classic()+
+  theme(axis.text.x.bottom = element_blank(),
+        axis.ticks.x.bottom = element_blank())+
+  xlab("Scaffolds")+ylab("Length bp")+
+  geom_vline(xintercept = which(sorted_refs$length < 50000)[1],
+             color = "blue", linetype = "dashed");p
+
+ggsave(file="Scaffold_plots.png", p, width = 5, height = 18)
+
+

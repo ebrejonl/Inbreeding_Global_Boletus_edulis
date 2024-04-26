@@ -456,8 +456,34 @@ full <- hist1/hist2/hist3 ; full
 
 ggsave(plot = full, filename = "Histogram_panel.png", width = 16, height = 8, dpi = 300)  
 
+##################################################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure S4 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
+for_FIS_comp <- read.csv2(file = "FROH_per_category_10_April.csv") %>% 
+  pivot_longer(cols=c("FRoh_600_1700g", "FRoh_600_300g", "FRoh_200_50g",
+                      "FRoh_300_100g", "FRoh_100_20g",
+                      "FRoh_20_9g", "FRoh_1700_500g",
+                      "FRoh_500_100g", "FRoh_500_50g",  "FRoh_50_20g", "FRoh_500_20g",
+                      "FRoh_50_9g", "FRoh_1700_200g",
+                      "FRoh_200_20g"), 
+               names_to = "Category", values_to = "FROH") %>% 
+  filter(Category=="FRoh_1700_200g"| Category=="FRoh_200_50g"|
+           Category=="FRoh_50_9g") %>%
+  group_by(ID,pop) %>%
+  mutate(FROH_tot=sum(FROH)) %>%
+  summarize(FROH_tot=sum(FROH), FIS=mean(as.numeric(F),na.rm = T)) %>%
+  mutate(FROH=FROH_tot) %>%
+  select(-FROH_tot) %>%
+  rename(lineage=pop) %>%
+  ggplot()+
+  ylab(expression("F"[ROH]))+
+  xlab(expression("F"[IS]))+
+  geom_point(mapping=aes(x =FIS, y=FROH, fill=lineage),cex=4,shape = 21, colour = "black")+
+  scale_fill_brewer(palette = "Set2")+ theme_apa()+theme(aspect.ratio = 1,
+        axis.title.y.left = element_text(size=18),
+        axis.title.x.bottom = element_text(size=18));for_FIS_comp
 
+ggsave("Supplentary_Figure_FIS.png", for_FIS_comp, width = 8, height = 8)
 
 ##################################################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Figure S5 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#

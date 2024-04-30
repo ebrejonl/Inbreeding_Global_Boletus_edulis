@@ -35,23 +35,25 @@ violin <- ggplot(mydata, aes(x=lineage, y=FRoh, fill=lineage))+
   xlab("Lineage")+
   ylim(0,0.21)+
   #scale_x_discrete(labels=c("Alaska", "British Columbia","Colorado", 
-   #                         "East Coast", "Europe", "Guatemala", "West Coast"))+
+  #                         "East Coast", "Europe", "Guatemala", "West Coast"))+
   ylab(expression("F"[ROH]))+
   theme_apa()+
   ggtitle("")+
   #theme(aspect.ratio = 1)+
   theme(legend.position = "none")+
-  theme(axis.title.y.left = element_text(size=24),
-        axis.title.x.bottom = element_text(size=22, vjust = -1),
-        axis.text.y.left = element_text(size=20), 
-        axis.text.x.bottom = element_text(size=20, vjust = 0) ) ; violin
+  theme(axis.title.y.left = element_text(size=26),
+        axis.title.x.bottom = element_text(size=24, vjust = -1, color="black"),
+        axis.text.y.left = element_text(size=20, color="black"), 
+        axis.text.x.bottom = element_text(size=20, vjust = 0, color="black") ) ; violin
+## PCA
 
-###### PCA ######
-p_pca1 <- ggplot(data = scores, aes(x=scores$X1,y=scores$X2, color=scores$pop)) + theme_apa() +
+p_pca1 <- ggplot(data = scores, aes(x=scores$X1,y=scores$X2, fill=scores$pop)) + theme_apa() +
   #ggtitle(i:i+1) +
-  geom_jitter(cex=2.5)+
-  stat_ellipse(type="norm")+
-  scale_color_brewer(palette = "Dark2")+
+  #geom_point(shape=21,cex=2.5,alpha=1)+
+  geom_point(data = scores, aes(x=scores$X1,y=scores$X2, color=scores$pop),shape=21,cex=2.5,alpha=1)+
+  stat_ellipse(data = scores, aes(x=scores$X1,y=scores$X2, color=scores$pop),type="norm")+
+  scale_color_brewer(aesthetics = "fill",palette = "Set2")+
+  scale_color_brewer(aesthetics = "color",palette = "Set2")+
   #geom_jitter(fill=scores$pop,size=0.4) +
   xlab(paste("PC ","1" ," (" ,PEV[1],")",sep="")) +
   ylab(paste("PC ","2"," (" ,PEV[2],")",sep="")) +
@@ -60,47 +62,45 @@ p_pca1 <- ggplot(data = scores, aes(x=scores$X1,y=scores$X2, color=scores$pop)) 
   #labs(color="Lineages")+
   #theme(aspect.ratio = 1.25)+
   theme(legend.position="none") + geom_vline(xintercept = 0, lty = 3 , alpha=0.6) +
-  theme( axis.title.y.left = element_text(size=22),
-        axis.text.y.left = element_text(size=20),
-        axis.title.x.bottom = element_text(size=22, vjust = -1),
-        axis.text.x.bottom = element_text(size = 20))+
+  theme(aspect.ratio = 1, 
+        axis.title.y.left = element_text(size=26),
+        axis.title.x.bottom = element_text(size=24, vjust = -1, color="black"),
+        axis.text.y.left = element_text(size=20, color="black"), 
+        axis.text.x.bottom = element_text(size=20, vjust = 0, color="black") )+
   geom_hline(yintercept = 0,lty = 3,alpha=0.6 ) ; p_pca1
 
-p_pca2 <- ggplot(data = scores, aes(x=scores$X2,y=scores$X3, color=scores$pop)) + theme_apa() +
+p_pca2 <- ggplot(data = scores, aes(x=scores$X3,y=scores$X4, fill=scores$pop)) + theme_apa() +
   #ggtitle(i:i+1) +
-  geom_jitter(cex=2.5)+
-  stat_ellipse(type="norm")+
+  #geom_point(shape=21,cex=2.5,alpha=1)+
+  geom_point(data = scores, aes(x=scores$X3,y=scores$X4, color=scores$pop),shape=21,cex=2.5,alpha=1)+
+  stat_ellipse(data = scores, aes(x=scores$X3,y=scores$X4, color=scores$pop),type="norm")+
+  scale_color_brewer(aesthetics = "fill",palette = "Set2")+
+  scale_color_brewer(aesthetics = "color",palette = "Set2")+
+  #stat_ellipse(type="norm")+
   scale_x_continuous(n.breaks =4)+
   scale_y_continuous(n.breaks =4)+
-  scale_color_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Set2")+
   #geom_jitter(fill=scores$pop,size=0.4) +
-  xlab(paste("PC ","2" ," (",PEV[2],")",sep="")) +
-  ylab(paste("PC ","3"," (",PEV[3],")",sep="")) +
+  xlab(paste("PC ","3" ," (",PEV[3],")",sep="")) +
+  ylab(paste("PC ","4"," (",PEV[4],")",sep="")) +
   #labs(color="Lineages")+
   #theme(aspect.ratio = 1.25)+
   theme(legend.position="none") + geom_vline(xintercept = 0, lty = 3 , alpha=0.6) +
-  theme(axis.title.y.left = element_text(size=22),
-        axis.text.y.left = element_text(size=20),
-        axis.title.x.bottom = element_text(size=22, vjust = -1),
-        axis.text.x.bottom = element_text(size = 20))+
+  theme(aspect.ratio = 1,
+        axis.title.y.left = element_text(size=26),
+        axis.title.x.bottom = element_text(size=24, vjust = -1, color="black"),
+        axis.text.y.left = element_text(size=20, color="black"), 
+        axis.text.x.bottom = element_text(size=20, vjust = 0, color="black"))+
   geom_hline(yintercept = 0,lty = 3,alpha=0.6 ) +
   geom_hline(yintercept = 0,lty = 3,alpha=0.6 ) ; p_pca2
 
 ### Panel patchwork
-#pdf("panel1.pdf", width = 10, height = 12)
-#ggsave("panel1_02.svg", plot=panel1,width = 10, height = 12 )
-panel1 <-  (p_pca1 | p_pca2) / violin + 
-  plot_layout(heights = c(0.4,0.6)) ; panel1#+
-
-#ggsave("panel_left_pca_parent.svg", plot = panel_alternative, width = 19, height = 10)
 panel_alternative <- p_pca1 + p_pca2 +violin +plot_layout(design= "AC 
   BC", widths =c(3, 10) , heights = c(5,5)) +
   plot_annotation(tag_levels = list(c("(b)", "(c)", "(d)"))) & theme(plot.tag = element_text(size=20)) ; panel_alternative
 
-#panel_alternative <- (violin) +p_pca1/p_pca2 + 
-#  plot_layout(widths = c(10,3), heights = c(5,5)) +
-#  plot_annotation(tag_levels = 'A' ) #& theme(aspect.ratio = 1)
-###ggsave("panel_alternative.svg", plot = panel_alternative, width = 15, height = 10)
+
+ggsave("Panel_Figure1.svg", plot = panel_alternative, width = 20.5, height = 10)
 
 
 

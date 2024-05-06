@@ -36,7 +36,7 @@ violin <- ggplot(mydata, aes(x=lineage, y=FRoh, fill=lineage))+
   ylim(0,0.21)+
   #scale_x_discrete(labels=c("Alaska", "British Columbia","Colorado", 
   #                         "East Coast", "Europe", "Guatemala", "West Coast"))+
-  ylab(expression("F"[ROH]))+
+  ylab(expression(italic("F")[ROH]))+
   theme_apa()+
   ggtitle("")+
   #theme(aspect.ratio = 1)+
@@ -146,7 +146,7 @@ HS <- mydata %>% filter(!lineage=="GU") %>%
   xlab("LGM Habitat suitability")+
   guides(fill = guide_legend(override.aes = list(linetype = 0)))+
   #guides(color  = NULL)+
-  ylab(expression("F"[ROH]))+
+  ylab(expression(italic("F")[ROH]))+
   geom_smooth(method="glm",
               method.args = list(family =binomial(link="logit")), 
               se = F,  cex=1.2)+
@@ -162,7 +162,7 @@ LAT <- ggplot(mydata, aes(x=lat, y=FRoh, color=lineage, fill=lineage))+
   scale_color_manual(values=Palette, guide=F)+
   guides(fill = guide_legend(override.aes = list(linetype = 0)))+
   xlab("Latitude")+
-  ylab(expression("F"[ROH]))+
+  ylab(expression(italic("F")[ROH]))+
   geom_smooth(method="glm",
               method.args = list(family =binomial(link="logit")), 
               se = F,  cex=1.2)+
@@ -181,7 +181,7 @@ EL <- ggplot(mydata, aes(x=elevation, y=FRoh, color=lineage, fill=lineage))+
               method.args = list(family =binomial(link="logit")), 
               se = F,  cex=1.2)+
   xlab("Elevation (m)")+
-  ylab(expression("F"[ROH]))+
+  ylab(expression(italic("F")[ROH]))+
   theme_apa() +
   theme(aspect.ratio = 1, axis.title.y.left = element_text(size=24),
         axis.title.x.bottom = element_text(size=20, vjust = -1),
@@ -387,11 +387,11 @@ new_plot <- mydata %>%
   #  theme_simple(axis_lines = TRUE, grid_lines = FALSE, base_size = 13,
   #              base_family = "Helvetica") +
   ylab("% of genome IBD") +
-    scale_x_discrete(guide = guide_axis(n.dodge = 1), labels=c("[1700:200g]",                        
-                            "[200:50g]",
-                             "[50:9g]")) +
+    scale_x_discrete(guide = guide_axis(n.dodge = 1), labels=c("1700-200",                        
+                            "200-50",
+                             "50-9")) +
   scale_fill_brewer(palette = "Set2") +
-  xlab("ROH length class [~ generations to common ancestor]") +
+  xlab("ROH length class (~ generations to most recent common ancestor)") +
   theme_apa() +
   theme(legend.position = "bottom",panel.grid.minor.x = element_line(color="black", linewidth=0.4),
         #panel.grid.major.y = element_line(color="black", linewidth=0.4),
@@ -476,8 +476,8 @@ for_FIS_comp <- read.csv2(file = "FROH_per_category_10_April.csv") %>%
   select(-FROH_tot) %>%
   rename(lineage=pop) %>%
   ggplot()+
-  ylab(expression("F"[ROH]))+
-  xlab(expression("F"[IS]))+
+  ylab(expression(italic("F")[ROH]))+
+  xlab(expression(italic("F")[IS]))+
   geom_point(mapping=aes(x =FIS, y=FROH, fill=lineage),cex=4,shape = 21, colour = "black")+
   scale_fill_brewer(palette = "Set2")+ theme_apa()+theme(aspect.ratio = 1,
         axis.title.y.left = element_text(size=18),
